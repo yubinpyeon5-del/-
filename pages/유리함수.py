@@ -1,12 +1,12 @@
 # app.py
 import streamlit as st
 import numpy as np
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 # --- 페이지 기본 설정 ---
 st.set_page_config(page_title="유리함수 교과서 — y = k/x", layout="wide")
 
-# --- 교과서 느낌 스타일 ---
+# --- 교과서 스타일 ---
 st.markdown(
     """
     <style>
@@ -37,7 +37,7 @@ st.write("슬라이더로 k 값을 조절하며 그래프의 변화와 성질을
 # --- 슬라이더 설정 ---
 with st.sidebar:
     st.header("설정")
-    k = st.slider("k 값 (k ≠ 0)", min_value=-10.0, max_value=10.0, value=2.0, step=0.1)
+    k = st.slider("k 값 (k ≠ 0)", -10.0, 10.0, 2.0, 0.1)
     if abs(k) < 1e-9:
         k = 0.1  # 0 방지
     x_range = st.slider("x 범위 (대칭)", 5.0, 50.0, 10.0, 1.0)
@@ -67,16 +67,14 @@ st.markdown(
 st.header("대칭 성질 (Symmetry)")
 st.markdown(
     """
-- 이 함수는 **원점 대칭** 함수입니다.  
-  → \\(f(-x) = -f(x)\\) 이므로 **홀함수**입니다.  
-- 또한, 함수 \\(y = \\dfrac{k}{x}\\)의 그래프는  
-  직선 **y = x** 와 **y = -x** 에 대해 서로 **대칭 관계**에 있습니다.  
-  즉, \\(y = \\dfrac{k}{x}\\)를 y=x에 대해 대칭이동하면 \\(y = \\dfrac{x}{k}\\)가 되고,  
-  y=-x에 대해 대칭이동하면 \\(y = -\\dfrac{x}{k}\\)가 됩니다.
+- **원점 대칭**: \\(f(-x) = -f(x)\\) → **홀함수**  
+- **y=x, y=-x 대칭 관계**  
+  - \\(y = \\dfrac{k}{x}\\)을 y=x에 대해 대칭이동하면 \\(y = \\dfrac{x}{k}\\)  
+  - y=-x에 대해 대칭이동하면 \\(y = -\\dfrac{x}{k}\\)
 """
 )
 
-st.header("k 값에 따른 그래프의 변화")
+st.header("k 값에 따른 그래프 변화")
 st.markdown(
     """
 - **k > 0** → 그래프는 1사분면과 3사분면에 위치  
@@ -89,54 +87,45 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 그래프 데이터 생성 ---
 x_min, x_max = -x_range, x_range
-x_left = np.linspace(x_min, -1e-6, 1000)
-x_right = np.linspace(1e-6, x_max, 1000)
+x_left = np.linspace(x_min, -0.001, 1000)
+x_right = np.linspace(0.001, x_max, 1000)
 y_left = k / x_left
 y_right = k / x_right
 
-# --- 그래프 그리기 ---
-fig = go.Figure()
+# --- Matplotlib 그래프 ---
+fig, ax = plt.subplots(figsize=(7, 7))
 
-# 유리함수 그래프
-fig.add_trace(go.Scatter(x=x_left, y=y_left, mode="lines", name=f"y = {k:.2f}/x", line=dict(width=2)))
-fig.add_trace(go.Scatter(x=x_right, y=y_right, mode="lines", showlegend=False, line=dict(width=2)))
+# 함수 그래프
+ax.plot(x_left, y_left, 'b', label=f'y = {k:.2f}/x')
+ax.plot(x_right, y_right, 'b')
 
 # 점근선 (x=0, y=0)
-fig.add_shape(type="line", x0=0, x1=0, y0=-x_range*10, y1=x_range*10,
-              line=dict(color="gray", width=1, dash="dash"))
-fig.add_shape(type="line", x0=-x_range, x1=x_range, y0=0, y1=0,
-              line=dict(color="gray", width=1, dash="dash"))
+ax.axvline(0, color='gray', linestyle='--', linewidth=1)
+ax.axhline(0, color='gray', linestyle='--', linewidth=1)
 
 # 대칭선 (y=x, y=-x)
-fig.add_shape(type="line", x0=-x_range, x1=x_range, y0=-x_range, y1=x_range,
-              line=dict(color="lightblue", width=1, dash="dot"))
-fig.add_shape(type="line", x0=-x_range, x1=x_range, y0=x_range, y1=-x_range,
-              line=dict(color="lightblue", width=1, dash="dot"))
+xx = np.linspace(-x_range, x_range, 500)
+ax.plot(xx, xx, color='lightblue', linestyle=':', linewidth=1, label='y = x')
+ax.plot(xx, -xx, color='lightblue', linestyle=':', linewidth=1, label='y = -x')
 
 # 대표점 표시
 if show_points:
     xs = np.array([1, -1, 2, -2])
     ys = k / xs
-    fig.add_trace(go.Scatter(
-        x=xs, y=ys,
-        mode="markers+text",
-        text=[f"({x:.1f}, {y:.2f})" for x, y in zip(xs, ys)],
-        textposition="top center",
-        marker=dict(size=8, color="crimson"),
-        name="대표점"
-    ))
+    ax.scatter(xs, ys, color='crimson', s=50, label='대표점')
+    for x, y in zip(xs, ys):
+        ax.text(x, y, f"({x:.0f},{y:.1f})", fontsize=10, ha='left', va='bottom')
 
-# 그래프 설정
-fig.update_layout(
-    title=f"그래프: y = {k:.2f}/x  ｜  k의 부호: {'+' if k>0 else '-'}  ｜  |k| = {abs(k):.2f}",
-    xaxis=dict(title="x", range=[x_min, x_max], zeroline=False),
-    yaxis=dict(title="y", range=[-x_range, x_range], zeroline=False),
-    height=650,
-    margin=dict(l=40, r=40, t=80, b=40),
-)
+# 축 범위 및 비율
+ax.set_xlim(-x_range, x_range)
+ax.set_ylim(-x_range, x_range)
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_title(f"y = {k:.2f}/x  ｜  k의 부호: {'+' if k>0 else '-'}  ｜  |k| = {abs(k):.2f}")
+ax.legend(loc="upper right")
+ax.grid(True, linestyle=':')
 
-# --- 그래프 출력 ---
-st.plotly_chart(fig, use_container_width=True)
+st.pyplot(fig)
 
 # --- 대표값 표 출력 ---
 if show_table:
@@ -156,9 +145,9 @@ st.markdown(
 - 정의역: \\(x \\neq 0\\)  
 - 치역: \\(y \\neq 0\\)  
 - 점근선: 수직 \\(x=0\\), 수평 \\(y=0\\)  
-- 대칭성: 원점에 대하여 대칭, y=x·y=-x에 대해 대칭 관계 존재  
+- 대칭성: 원점에 대해 대칭, y=x·y=-x에 대해 대칭 관계 존재  
 - k>0 → 1사분면과 3사분면 / k<0 → 2사분면과 4사분면  
-- |k| 커질수록 그래프가 축에서 멀어짐  
+- |k| 커질수록 그래프가 축에서 멀어짐
 """
 )
 
